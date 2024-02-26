@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using System.Xml.Serialization;
 
 namespace variable_column_dgv
@@ -19,9 +20,11 @@ namespace variable_column_dgv
             var numCol = dataGridView.Columns[0];
             numCol.Frozen = true;
             numCol.AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
-            foreach (DataGridViewColumn column in dataGridView.Columns)
+
+            for (int i = 0; i < 24; i++)
             {
-                column.AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+                var name = $"Hour[{i:d2}]";
+                Days.Columns.Add(new ListItemDescriptor(name));
             }
             // Fill column(cosmetic)
             dataGridView.Columns.Add(new DataGridViewTextBoxColumn
@@ -33,15 +36,14 @@ namespace variable_column_dgv
             Days.Add(new Day { Number = 3 });            
             Days.Add(new Day { Number = 4 });
 
-            Days[3].Number = 44;
-            Days[0].Hours[9].Value = 99;
+            Days[0].Number = 55;  Days[0].Hours[0].Value = 99;
         }
         DayList Days { get; } = new DayList();
     }
-    class PropertyInfoDescriptor : PropertyDescriptor
+    class ListItemDescriptor : PropertyDescriptor
     {
-        public PropertyInfoDescriptor(string name) : base(name, new Attribute[0]) { }
-        public override Type ComponentType => throw new NotImplementedException();
+        public ListItemDescriptor(string name) : base(name, new Attribute[0]) { }
+        public override Type ComponentType => typeof(Day);
         public override bool IsReadOnly => false;
         public override Type PropertyType => typeof(int);
         public override bool CanResetValue(object component) => true;
@@ -49,7 +51,17 @@ namespace variable_column_dgv
         {
             if(component is Day day)
             {
-
+                switch (Name)
+                {
+                    case nameof(Day.Number): 
+                        day.Number = default; 
+                        break;
+                    default:
+                        var index =
+                            Convert.ToInt32(_getIndex.Match(Name).Groups[1].Value);
+                        day.Hours[index].Value = default; 
+                        break;
+                }
             }
         }
         Regex _getIndex = new Regex(@"\[(\d+)\]");
@@ -90,24 +102,24 @@ namespace variable_column_dgv
     {
         public DayList()
         {
-            Columns = new BindingList<PropertyInfoDescriptor>();
-            Columns.Add(new PropertyInfoDescriptor(nameof(Day.Number)));
+            Columns = new BindingList<ListItemDescriptor>();
+            Columns.Add(new ListItemDescriptor(nameof(Day.Number)));
 
             for (int i = 0; i < 24; i++)
             {
                 var name = $"Hour[{i:d2}]";
-                Columns.Add(new PropertyInfoDescriptor(name));
+                Columns.Add(new ListItemDescriptor(name));
             }
         }
-        private BindingList<PropertyInfoDescriptor> Columns { get; } 
+        public BindingList<ListItemDescriptor> Columns { get; } 
         public PropertyDescriptorCollection GetItemProperties(PropertyDescriptor[]? listAccessors)
         {
             if (listAccessors is PropertyDescriptor[] accessors && accessors.Any())
             {
-                var builder = new List<PropertyInfoDescriptor>();
+                var builder = new List<ListItemDescriptor>();
                 foreach (var item in accessors)
                 {
-                    if(builder.FirstOrDefault(_=>_.Name == item.Name) is PropertyInfoDescriptor pid)
+                    if(builder.FirstOrDefault(_=>_.Name == item.Name) is ListItemDescriptor pid)
                     {
                         builder.Add(pid);
                     }
